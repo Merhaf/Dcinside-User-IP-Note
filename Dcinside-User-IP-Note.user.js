@@ -134,115 +134,115 @@
         return noteLink; // 생성된 링크 반환
     };
 
-// 닉네임을 업데이트하는 함수
-const updateNickname = (nicknameElement, identifier, nickname, isUidUser = true) => {
-    // UID 또는 IP로 메모를 확인
-    const memoContent = userIpNotes[identifier];
+    // 닉네임을 업데이트하는 함수
+    const updateNickname = (nicknameElement, identifier, nickname, isUidUser = true) => {
+        // UID 또는 IP로 메모를 확인
+        const memoContent = userIpNotes[identifier];
 
-    // 닉네임 요소 스타일 설정
-    setNicknameStyles(nicknameElement);
+        // 닉네임 요소 스타일 설정
+        setNicknameStyles(nicknameElement);
 
-    // 기존 요소 삭제 (중복 방지)
-    nicknameElement.innerHTML = ''; // 닉네임 요소의 내용을 비움
+        // 기존 요소 삭제 (중복 방지)
+        nicknameElement.innerHTML = ''; // 닉네임 요소의 내용을 비움
 
-    // 닉네임 추가
-    addNicknameElement(nicknameElement, nickname, memoContent, identifier); // identifier를 인자로 추가
+        // 닉네임 추가
+        addNicknameElement(nicknameElement, nickname, memoContent, identifier); // identifier를 인자로 추가
 
-    // 메모 또는 UID/IP 추가
-    if (memoContent) {
-        addMemoElement(nicknameElement, memoContent);
-    } else if (identifier) {
-        addIdentifierElement(nicknameElement, identifier);
-    }
-};
-
-// 닉네임 스타일 설정 함수
-const setNicknameStyles = (element) => {
-    element.style.textOverflow = 'ellipsis'; // 생략 부호 설정
-    element.style.maxWidth = '100px';
-    element.style.overflow = 'hidden'; // 오버플로우 숨김
-    element.style.display = 'inline-block'; // 인라인 블록으로 설정
-};
-
-// 닉네임 추가 함수
-const addNicknameElement = (nicknameElement, nickname, memoContent, identifier) => {
-    const nicknameEm = document.createElement('em'); // <em> 요소 생성
-    nicknameEm.textContent = nickname; // 닉네임 텍스트 설정
-    nicknameElement.appendChild(nicknameEm); // <em> 요소를 닉네임 요소에 추가
-
-    // 툴팁 설정
-    if (memoContent) {
-        nicknameEm.title = memoContent; // 메모 내용이 있을 경우 툴팁 설정
-    } else {
-        nicknameEm.title = nickname; // 메모 내용이 없을 경우 원래 닉네임을 툴팁으로 설정
-    }
-};
-
-// 메모 추가 함수
-const addMemoElement = (nicknameElement, memoContent) => {
-    const noteSpan = createSpan(` (${memoContent})`, UID_STYLE, memoContent); // 메모 텍스트와 스타일 설정
-    nicknameElement.appendChild(noteSpan); // 메모 요소를 닉네임에 추가
-};
-
-// UID/IP 추가 함수
-const addIdentifierElement = (nicknameElement, identifier) => {
-    const identifierSpan = createSpan(` (${identifier})`, UID_STYLE, identifier); // UID/IP 텍스트와 스타일 설정
-    nicknameElement.appendChild(identifierSpan); // UID/IP 요소를 닉네임에 추가
-};
-
-// span 요소 생성 함수
-const createSpan = (text, style, title) => {
-    const span = document.createElement('span'); // 새로운 span 요소 생성
-    span.textContent = text; // 텍스트 설정
-    span.style.cssText = style; // 스타일 적용
-    if (title) {
-        span.title = title; // 툴팁 내용 설정
-    }
-    return span;
-};
-
-// UID 유저 닉네임 업데이트
-const updateUidNickname = (nicknameElement, uid, nickname) => {
-    updateNickname(nicknameElement, uid, nickname, true);
-};
-
-// IP 유저 닉네임 업데이트
-const updateIpNickname = (nicknameElement, ip, nickname) => {
-    updateNickname(nicknameElement, ip, nickname, false);
-};
-
-// 메모 버튼을 생성하고 추가하는 함수
-const addNoteLink = (uid, nicknameElement, ipElement) => {
-    if (!nicknameElement.parentNode.querySelector('.note-icon')) {
-        const noteLink = createNoteLink(uid, ipElement, uid); // UID를 전달
-        nicknameElement.parentNode.insertBefore(noteLink, nicknameElement); // 메모 버튼을 닉네임 앞에 추가
-    }
-};
-
-// 작성자를 처리하는 함수
-const processWriter = (writer) => {
-    const uid = writer.getAttribute('data-uid'); // UID 가져오기
-    const ip = writer.getAttribute('data-ip'); // IP 가져오기
-    const nicknameElement = writer.getElementsByClassName('nickname')[0]; // 닉네임 요소 가져오기
-    const ipElement = writer.getElementsByClassName('ip')[0]; // IP 요소 가져오기
-
-    // UID 유저 처리
-    if (nicknameElement && uid) {
-        updateNickname(nicknameElement, uid, writer.getAttribute('data-nick')); // UID가 있는 경우 닉네임 업데이트
-        addNoteLink(uid, nicknameElement, ipElement); // UID에 대한 메모 버튼 추가
-    }
-
-    // IP 유저 처리
-    if (ip && nicknameElement) {
-        updateIpNickname(nicknameElement, ip, writer.getAttribute('data-nick')); // IP가 있는 경우 닉네임 업데이트
-        addNoteLink(ip, nicknameElement, ipElement); // IP에 대한 메모 버튼 추가
-
-        // 자동으로 추가된 IP 요소 삭제
-        if (ipElement) {
-            ipElement.remove(); // IP 요소 삭제
+        // 메모 또는 UID/IP 추가
+        if (memoContent) {
+            addMemoElement(nicknameElement, memoContent);
+        } else if (identifier) {
+            addIdentifierElement(nicknameElement, identifier);
         }
-    }
-};
+    };
+
+    // 닉네임 스타일 설정 함수
+    const setNicknameStyles = (element) => {
+        element.style.textOverflow = 'ellipsis'; // 생략 부호 설정
+        element.style.maxWidth = '100px';
+        element.style.overflow = 'hidden'; // 오버플로우 숨김
+        element.style.display = 'inline-block'; // 인라인 블록으로 설정
+    };
+
+    // 닉네임 추가 함수
+    const addNicknameElement = (nicknameElement, nickname, memoContent, identifier) => {
+        const nicknameEm = document.createElement('em'); // <em> 요소 생성
+        nicknameEm.textContent = nickname; // 닉네임 텍스트 설정
+        nicknameElement.appendChild(nicknameEm); // <em> 요소를 닉네임 요소에 추가
+
+        // 툴팁 설정
+        if (memoContent) {
+            nicknameEm.title = memoContent; // 메모 내용이 있을 경우 툴팁 설정
+        } else {
+            nicknameEm.title = nickname; // 메모 내용이 없을 경우 원래 닉네임을 툴팁으로 설정
+        }
+    };
+
+    // 메모 추가 함수
+    const addMemoElement = (nicknameElement, memoContent) => {
+        const noteSpan = createSpan(` (${memoContent})`, UID_STYLE, memoContent); // 메모 텍스트와 스타일 설정
+        nicknameElement.appendChild(noteSpan); // 메모 요소를 닉네임에 추가
+    };
+
+    // UID/IP 추가 함수
+    const addIdentifierElement = (nicknameElement, identifier) => {
+        const identifierSpan = createSpan(` (${identifier})`, UID_STYLE, identifier); // UID/IP 텍스트와 스타일 설정
+        nicknameElement.appendChild(identifierSpan); // UID/IP 요소를 닉네임에 추가
+    };
+
+    // span 요소 생성 함수
+    const createSpan = (text, style, title) => {
+        const span = document.createElement('span'); // 새로운 span 요소 생성
+        span.textContent = text; // 텍스트 설정
+        span.style.cssText = style; // 스타일 적용
+        if (title) {
+            span.title = title; // 툴팁 내용 설정
+        }
+        return span;
+    };
+
+    // UID 유저 닉네임 업데이트
+    const updateUidNickname = (nicknameElement, uid, nickname) => {
+        updateNickname(nicknameElement, uid, nickname, true);
+    };
+
+    // IP 유저 닉네임 업데이트
+    const updateIpNickname = (nicknameElement, ip, nickname) => {
+        updateNickname(nicknameElement, ip, nickname, false);
+    };
+
+    // 메모 버튼을 생성하고 추가하는 함수
+    const addNoteLink = (uid, nicknameElement, ipElement) => {
+        if (!nicknameElement.parentNode.querySelector('.note-icon')) {
+            const noteLink = createNoteLink(uid, ipElement, uid); // UID를 전달
+            nicknameElement.parentNode.insertBefore(noteLink, nicknameElement); // 메모 버튼을 닉네임 앞에 추가
+        }
+    };
+
+    // 작성자를 처리하는 함수
+    const processWriter = (writer) => {
+        const uid = writer.getAttribute('data-uid'); // UID 가져오기
+        const ip = writer.getAttribute('data-ip'); // IP 가져오기
+        const nicknameElement = writer.getElementsByClassName('nickname')[0]; // 닉네임 요소 가져오기
+        const ipElement = writer.getElementsByClassName('ip')[0]; // IP 요소 가져오기
+
+        // UID 유저 처리
+        if (nicknameElement && uid) {
+            updateNickname(nicknameElement, uid, writer.getAttribute('data-nick')); // UID가 있는 경우 닉네임 업데이트
+            addNoteLink(uid, nicknameElement, ipElement); // UID에 대한 메모 버튼 추가
+        }
+
+        // IP 유저 처리
+        if (ip && nicknameElement) {
+            updateIpNickname(nicknameElement, ip, writer.getAttribute('data-nick')); // IP가 있는 경우 닉네임 업데이트
+            addNoteLink(ip, nicknameElement, ipElement); // IP에 대한 메모 버튼 추가
+
+            // 자동으로 추가된 IP 요소 삭제
+            if (ipElement) {
+                ipElement.remove(); // IP 요소 삭제
+            }
+        }
+    };
 
     // 사용자 IP 메모를 JSON 파일로 다운로드하는 함수
     const downloadIpNotes = () => {
