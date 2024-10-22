@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name Dcinside-User-IP-Note
 // @namespace http://tampermonkey.net/
-// @version 1.0
-// @description 유동 메모, 메모 다운로드&업로드, 통피 표시, 반고닉 식별코드 표시
+// @version 1.1
+// @description 유동 메모, 식별코드 메모, 메모 유무 표시, 메모 다운로드&업로드, 통피 표시, 반고닉 식별코드 표시
 // @author Merhaf
 // @match https://m.dcinside.com/board/*
 // @match https://gall.dcinside.com/mgallery/*
@@ -33,7 +33,6 @@
     };
 
     // 노트 아이콘 텍스트 및 UID 스타일 설정
-    const NOTE_ICON_TEXT = '🔖';
     const UID_STYLE = 'font-family: tahoma, sans-serif; font-size: 11px; color: #999;';
 
     // 로컬 스토리지에서 사용자 IP 메모를 불러오는 함수
@@ -56,7 +55,7 @@
     };
 
     // 로컬 스토리지에서 사용자 IP 메모를 불러옴
-    const userIpNotes = loadUserIpNotes();
+    let userIpNotes = loadUserIpNotes();
 
     // IP 주소로부터 이동통신사를 반환하는 함수
     const getCarrier = (ip) => {
@@ -73,12 +72,21 @@
         const note = userIpNotes[ip] ? `(${userIpNotes[ip]})` : ''; // 메모가 있으면 표시
         const carrier = getCarrier(ip); // 이동통신사 정보를 가져옴
         ipElement.textContent = note || `(${ip})${carrier}`; // IP와 이동통신사 정보를 설정
+        ipElement.title = note || `(${ip})${carrier}`; // 툴팁 추가
+    };
+
+    // 메모 아이콘의 텍스트와 타이틀을 업데이트하는 함수
+    const updateNoteIconTextAndTitle = (noteIcon, ip) => {
+        noteIcon.textContent = userIpNotes[ip] ? '🟨' : '⚪'; // 이모지 변경
+        noteIcon.title = userIpNotes[ip] || ip; // 툴팁 업데이트
     };
 
     // 사용자의 IP 메모를 초기화하는 함수
     const resetUserIpNote = (ip) => {
         delete userIpNotes[ip]; // 메모 삭제
         alert('메모가 초기화되었습니다.'); // 사용자에게 알림
+        saveUserIpNotes(userIpNotes); // 로컬 스토리지에 저장
+        updateNoteIcon(ip); // 아이콘 업데이트
     };
 
     // 사용자의 IP 메모를 저장하는 함수
@@ -88,37 +96,73 @@
         } else if (note.trim() !== "") {
             userIpNotes[ip] = note; // 메모 추가
             alert('메모가 추가되었습니다: ' + note); // 사용자에게 알림
+            saveUserIpNotes(userIpNotes); // 로컬 스토리지에 저장
+            updateNoteIcon(ip); // 아이콘 업데이트
         }
-        saveUserIpNotes(userIpNotes); // 로컬 스토리지에 저장
+    };
+
+    // 메모 아이콘을 업데이트하는 함수
+    const updateNoteIcon = (ip) => {
+        // 해당 IP 또는 UID에 대한 모든 note-icon 찾기
+        const noteIcons = document.querySelectorAll(
+            `[data-ip="${ip}"] .note-icon,
+             [data-uid="${ip}"] .note-icon`
+        );
+
+        noteIcons.forEach(noteIcon => updateNoteIconTextAndTitle(noteIcon, ip)); // 텍스트와 타이틀 업데이트
     };
 
     // 사용자 메모를 처리하는 함수
-    const handleUserNote = (ip, ipElement) => {
-        const note = prompt('IP 메모를 입력하세요:'); // 사용자에게 메모 입력 요청
+    const handleUserNote = (key, element) => {
+        const note = prompt('메모를 입력하세요:'); // 사용자에게 메모 입력 요청
         if (note !== null) {
-            saveUserIpNote(ip, note); // 메모 저장
-            updateIpLabel(ipElement, ip); // IP 라벨 업데이트
+            saveUserIpNote(key, note); // 메모 저장
+            updateIpLabel(element, key); // IP 또는 UID 라벨 업데이트
         }
     };
 
     // 메모 링크를 생성하는 함수
-    const createNoteLink = (ip, ipElement) => {
+    const createNoteLink = (ip, ipElement, uid) => {
         const noteLink = document.createElement('span'); // 새로운 span 요소 생성
         noteLink.className = 'note-icon'; // 클래스 설정
         noteLink.style.cursor = 'pointer'; // 커서 스타일 설정
         noteLink.style.fontSize = '0.5em'; // 폰트 크기 설정
-        noteLink.textContent = NOTE_ICON_TEXT; // 노트 아이콘 텍스트 설정
+
+        // 메모가 있는 경우와 없는 경우에 따라 이모지를 다르게 설정
+        updateNoteIconTextAndTitle(noteLink, ip); // 아이콘 텍스트와 타이틀 설정
         noteLink.addEventListener('click', () => handleUserNote(ip, ipElement)); // 클릭 이벤트 리스너 추가
         return noteLink; // 생성된 링크 반환
     };
 
     // 닉네임을 업데이트하는 함수
     const updateNickname = (nicknameElement, uid, nickname) => {
-        nicknameElement.textContent = nickname; // 닉네임 설정
-        const uidSpan = document.createElement('span'); // UID를 위한 새로운 span 요소 생성
-        uidSpan.textContent = ` (${uid})`; // UID 텍스트 설정
-        uidSpan.style.cssText = UID_STYLE; // UID 스타일 설정
-        nicknameElement.appendChild(uidSpan); // UID 요소를 닉네임에 추가
+        const memoContent = userIpNotes[uid]; // UID로 메모를 확인
+        nicknameElement.textContent = nickname; // 기존 닉네임 표시
+
+        const createSpan = (text, style) => {
+            const span = document.createElement('span'); // 새로운 span 요소 생성
+            span.textContent = text; // 텍스트 설정
+            span.style.cssText = style; // 스타일 적용
+            return span;
+        };
+
+        if (memoContent) {
+            // 메모가 있을 경우, 메모만 표시
+            const noteSpan = createSpan(` (${memoContent})`, UID_STYLE); // 메모 텍스트와 스타일 설정
+            nicknameElement.appendChild(noteSpan); // 메모 요소를 닉네임에 추가
+        } else if (uid) {
+            // UID가 있을 경우 UID 표시
+            const uidSpan = createSpan(` (${uid})`, UID_STYLE); // UID 텍스트와 스타일 설정
+            nicknameElement.appendChild(uidSpan); // UID 요소를 닉네임에 추가
+        }
+    };
+
+    // 메모 버튼을 생성하고 추가하는 함수
+    const addNoteLink = (uid, nicknameElement, ipElement) => {
+        if (!nicknameElement.parentNode.querySelector('.note-icon')) {
+            const noteLink = createNoteLink(uid, ipElement, uid); // UID를 전달
+            nicknameElement.parentNode.insertBefore(noteLink, nicknameElement); // 메모 버튼을 닉네임 앞에 추가
+        }
     };
 
     // 작성자를 처리하는 함수
@@ -128,21 +172,16 @@
         const nicknameElement = writer.getElementsByClassName('nickname')[0]; // 닉네임 요소 가져오기
         const ipElement = writer.getElementsByClassName('ip')[0]; // IP 요소 가져오기
 
+        // UID 유저 처리
         if (nicknameElement && uid) {
-            updateNickname(nicknameElement, uid, writer.getAttribute('data-nick')); // 닉네임 업데이트
+            updateNickname(nicknameElement, uid, writer.getAttribute('data-nick')); // UID가 있는 경우 닉네임 업데이트
+            addNoteLink(uid, nicknameElement, ipElement); // UID에 대한 메모 버튼 추가
         }
 
-        if (ip && nicknameElement && !nicknameElement.querySelector('.note-icon')) {
-            nicknameElement.appendChild(createNoteLink(ip, ipElement)); // 메모 링크 추가
+        // IP 유저 처리
+        if (ip && nicknameElement) {
+            addNoteLink(ip, nicknameElement, ipElement); // IP에 대한 메모 버튼 추가
             updateIpLabel(ipElement, ip); // IP 라벨 업데이트
-        }
-    };
-
-    // 작성자 목록을 업데이트하는 함수
-    const updateWriters = () => {
-        const writers = document.getElementsByClassName('gall_writer ub-writer'); // 모든 작성자 요소 가져오기
-        for (const writer of writers) {
-            processWriter(writer); // 각 작성자 처리
         }
     };
 
@@ -150,26 +189,29 @@
     const downloadIpNotes = () => {
         const blob = new Blob([JSON.stringify(userIpNotes, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
+
         const a = document.createElement('a');
         a.href = url;
         a.download = '디시인사이드IP메모목록.json'; // 다운로드할 파일 이름
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
+
         URL.revokeObjectURL(url); // 메모리 해제
     };
 
-// JSON 파일을 업로드하여 사용자 IP 메모를 로드하는 함수
-const uploadIpNotes = (event) => {
-    const file = event.target.files[0];
-    if (file) {
+    // 사용자 IP 메모를 업로드하는 함수 (덮어쓰기용)
+    const uploadIpNotesOverwrite = (event) => {
+        const file = event.target.files[0];
+        if (!file) return; // 파일이 없으면 종료
+
         const reader = new FileReader();
         reader.onload = (e) => {
             try {
                 const notes = JSON.parse(e.target.result);
-                Object.assign(userIpNotes, notes); // 기존 메모에 업로드한 메모 추가
+                userIpNotes = notes; // 기존 메모를 업로드한 메모로 덮어씌움
                 saveUserIpNotes(userIpNotes); // 로컬 스토리지에 저장
-                alert('메모가 성공적으로 업로드되었습니다.');
+                alert('메모가 성공적으로 덮어쓰기 되었습니다.');
                 updateWriters(); // 업데이트된 내용을 반영
                 location.reload(); // 페이지 새로고침
             } catch (error) {
@@ -178,52 +220,94 @@ const uploadIpNotes = (event) => {
             }
         };
         reader.readAsText(file);
-    }
-};
+    };
 
-// 다운로드 버튼 생성 및 설정
-const createDownloadButton = () => {
-    const downloadButton = document.createElement('button');
-    downloadButton.textContent = 'IP 메모 다운로드'; // 버튼 텍스트 설정
-    downloadButton.style.position = 'fixed';
-    downloadButton.style.top = '10px';
-    downloadButton.style.right = '10px'; // 업로드 버튼 옆에 위치하도록 설정
-    downloadButton.style.zIndex = '9999'; // 페이지의 최상단에 위치하도록 설정
-    downloadButton.addEventListener('click', downloadIpNotes); // 클릭 시 다운로드 처리
-    document.body.appendChild(downloadButton);
-};
+    // 사용자 IP 메모를 업로드하는 함수 (추가하기용)
+    const uploadIpNotesMerge = (event) => {
+        const file = event.target.files[0];
+        if (!file) return; // 파일이 없으면 종료
 
-// 업로드 버튼 생성 및 설정
-const createUploadButton = () => {
-    const uploadButton = document.createElement('button');
-    uploadButton.textContent = 'IP 메모 업로드'; // 버튼 텍스트 설정
-    uploadButton.style.position = 'fixed';
-    uploadButton.style.top = '10px';
-    uploadButton.style.right = '120px'; // 다운로드 버튼 옆에 위치하도록 설정
-    uploadButton.style.zIndex = '9999'; // 페이지의 최상단에 위치하도록 설정
-    uploadButton.addEventListener('click', () => {
-        const fileInput = document.createElement('input'); // 파일 선택 input 생성
-        fileInput.type = 'file';
-        fileInput.accept = 'application/json';
-        fileInput.style.display = 'none'; // 화면에 보이지 않도록 설정
-        fileInput.addEventListener('change', uploadIpNotes); // 파일 선택 시 업로드 처리
-        document.body.appendChild(fileInput); // body에 추가
-        fileInput.click(); // 파일 선택 대화상자 열기
-        document.body.removeChild(fileInput); // 사용 후 삭제
-    });
-    document.body.appendChild(uploadButton); // 업로드 버튼 추가
-};
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const notes = JSON.parse(e.target.result);
+                Object.assign(userIpNotes, notes); // 기존 메모에 업로드한 메모 추가
+                saveUserIpNotes(userIpNotes); // 로컬 스토리지에 저장
+                alert('메모가 성공적으로 추가되었습니다.');
+                updateWriters(); // 업데이트된 내용을 반영
+                location.reload(); // 페이지 새로고침
+            } catch (error) {
+                console.error('파일을 파싱하는 중 오류 발생:', error);
+                alert('파일 형식이 올바르지 않습니다.');
+            }
+        };
+        reader.readAsText(file);
+    };
+
+    // 버튼 생성 및 설정 함수
+    const createButton = (text, clickHandler) => {
+        const button = document.createElement('button');
+        button.textContent = text; // 버튼 텍스트 설정
+        button.style.fontSize = '11px'; // 폰트 크기 설정
+        button.style.color = 'rgb(85, 85, 85)'; // 폰트 색상 설정
+        button.style.marginTop = '-1px'; // 위쪽 여백을 -1픽셀로 설정
+        button.addEventListener('click', clickHandler); // 클릭 시 처리
+        return button; // 생성한 버튼 반환
+    };
 
     // 초기화 함수
     const init = () => {
-        createDownloadButton(); // 다운로드 버튼 생성
-        createUploadButton(); // 업로드 버튼 생성
+        const areaLinksDiv = document.querySelector('.area_links.clear'); // 해당 div 선택
+        const ulElement = areaLinksDiv.querySelector('ul.fl.clear'); // ul 요소 선택
+
+        // 버튼 추가
+        const downloadButton = createButton('IP 메모 다운로드', downloadIpNotes);
+        const overwriteButton = createButton('IP 메모 덮어쓰기 업로드', () => {
+            const fileInput = document.createElement('input'); // 파일 선택 input 생성
+            fileInput.type = 'file';
+            fileInput.accept = 'application/json';
+            fileInput.style.display = 'none'; // 화면에 보이지 않도록 설정
+            fileInput.addEventListener('change', uploadIpNotesOverwrite); // 파일 선택 시 업로드 처리
+            document.body.appendChild(fileInput); // body에 추가
+            fileInput.click(); // 파일 선택 대화상자 열기
+            document.body.removeChild(fileInput); // 사용 후 삭제
+        });
+        const mergeButton = createButton('IP 메모 추가하기 업로드', () => {
+            const fileInput = document.createElement('input'); // 파일 선택 input 생성
+            fileInput.type = 'file';
+            fileInput.accept = 'application/json';
+            fileInput.style.display = 'none'; // 화면에 보이지 않도록 설정
+            fileInput.addEventListener('change', uploadIpNotesMerge); // 파일 선택 시 업로드 처리
+            document.body.appendChild(fileInput); // body에 추가
+            fileInput.click(); // 파일 선택 대화상자 열기
+            document.body.removeChild(fileInput); // 사용 후 삭제
+        });
+
+        // 각 버튼을 li로 감싸기
+        const downloadListItem = document.createElement('li');
+        downloadListItem.appendChild(downloadButton);
+        const overwriteListItem = document.createElement('li');
+        overwriteListItem.appendChild(overwriteButton);
+        const mergeListItem = document.createElement('li');
+        mergeListItem.appendChild(mergeButton);
+
+        // 버튼들을 ul의 맨 앞에 추가
+        ulElement.prepend(mergeListItem);
+        ulElement.prepend(overwriteListItem);
+        ulElement.prepend(downloadListItem);
+
         updateWriters(); // 작성자 목록 업데이트
+    };
+
+    // 작성자 목록을 업데이트하는 함수
+    const updateWriters = () => {
+        const writers = document.getElementsByClassName('gall_writer ub-writer'); // 모든 작성자 요소 가져오기
+        Array.from(writers).forEach(processWriter); // 각 작성자 처리
     };
 
     // 페이지가 로드될 때 초기화 함수 실행
     window.addEventListener('load', init);
 
     // 일정 간격으로 작성자 업데이트 실행
-    setInterval(updateWriters, 500); // 500ms마다 업데이트
+    setInterval(updateWriters, 1000);
 })();
